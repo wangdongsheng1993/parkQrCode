@@ -142,27 +142,57 @@
       phoneInput.addEventListener('input', () => { /* no-op */ });
       hintInput.addEventListener('input', () => { /* no-op */ });
       printBtn.addEventListener('click', () => window.print());
-      downloadBtn.addEventListener('click', () => {
-        const exportCanvas = document.createElement('canvas');
-        exportCanvas.width = 900;
-        exportCanvas.height = 1300;
-        const ctx = exportCanvas.getContext('2d');
+      function findQrDataURL() {
+        const c = qrBox.querySelector('canvas');
+        if (c && c.width > 0) return c.toDataURL('image/png');
+        const i = qrBox.querySelector('img');
+        if (i && i.src) return i.src;
+        return '';
+      }
+
+      async function downloadImage() {
+        const phone = normalizePhone(phoneInput.value);
+        const msg = hintInput.value.trim() || '扫码一键拨打，与车主联系';
+        if (!phone) return;
+        const url = buildDialURL(phone, msg);
+        await renderQR(url);
+        const qrSrc = findQrDataURL();
+        if (!qrSrc) return;
+        const W = 1200, H = 1600;
+        const out = document.createElement('canvas');
+        out.width = W; out.height = H;
+        const ctx = out.getContext('2d');
         ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0,0,exportCanvas.width,exportCanvas.height);
-        const scale = 2.5;
-        ctx.scale(scale, scale);
-        const imgData = new Image();
-        imgData.onload = () => {
-          ctx.drawImage(imgData, 0, 0);
-          const link = document.createElement('a');
-          link.download = '停车联系二维码.png';
-          link.href = exportCanvas.toDataURL('image/png');
-          link.click();
+        ctx.fillRect(0,0,W,H);
+        ctx.strokeStyle = '#111827';
+        ctx.lineWidth = 12;
+        ctx.strokeRect(24,24,W-48,H-48);
+        ctx.fillStyle = '#14532d';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = '600 48px system-ui, -apple-system, Segoe UI, Arial';
+        ctx.fillText('联系车主', W/2, 120);
+        const img = new Image();
+        img.onload = () => {
+          const size = 900;
+          const x = (W - size) / 2;
+          const y = 220;
+          ctx.drawImage(img, x, y, size, size);
+          ctx.fillStyle = '#374151';
+          ctx.font = '400 36px system-ui, -apple-system, Segoe UI, Arial';
+          ctx.fillText(msg, W/2, y + size + 60);
+          ctx.fillStyle = '#111827';
+          ctx.font = '700 54px system-ui, -apple-system, Segoe UI, Arial';
+          ctx.fillText(maskPhoneDisplay(phone), W/2, y + size + 130);
+          const a = document.createElement('a');
+          a.download = '停车联系二维码.png';
+          a.href = out.toDataURL('image/png');
+          a.click();
         };
-        const svg = new XMLSerializer().serializeToString(card.cloneNode(true));
-        const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
-        imgData.src = URL.createObjectURL(blob);
-      });
+        img.src = qrSrc;
+      }
+
+      downloadBtn.addEventListener('click', () => { downloadImage(); });
     </script>
   </body>
 </html>
