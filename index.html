@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>停车联系二维码</title>
+    <style>
+      :root { --bg:#f5f6f8; --card:#ffffff; --text:#111213; --muted:#6b7280; --accent:#14532d; --accent2:#22c55e; }
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; background: var(--bg); color: var(--text); }
+      .wrap { max-width: 960px; margin: 24px auto; padding: 0 16px; }
+      .header { display: flex; align-items: center; justify-content: space-between; }
+      .title { font-size: 20px; font-weight: 600; }
+      .panel { margin-top: 16px; background: var(--card); border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      .controls { display: grid; gap: 12px; }
+      label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 6px; }
+      input[type="text"] { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 16px; }
+      .btns { display: flex; gap: 10px; }
+      button { appearance: none; border: 0; background: var(--accent2); color: white; padding: 10px 14px; border-radius: 10px; font-size: 14px; cursor: pointer; }
+      button.secondary { background: #111827; }
+      .preview { background: #fafafa; border: 1px dashed #e5e7eb; border-radius: 12px; padding: 12px; display: flex; align-items: center; justify-content: center; }
+      .card { width: 360px; height: 520px; background: var(--card); border: 2px solid #111827; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
+      .badge { display: inline-flex; align-items: center; gap: 8px; background: #f0fdf4; color: var(--accent); border: 1px solid #dcfce7; padding: 8px 12px; border-radius: 999px; font-weight: 600; }
+      .qrbox { width: 280px; height: 280px; margin: 16px 0; display: grid; place-items: center; border: 1px solid #e5e7eb; border-radius: 12px; }
+      .hint { text-align: center; font-size: 14px; color: #374151; line-height: 1.5; }
+      .number { margin-top: 12px; font-size: 22px; font-weight: 700; letter-spacing: 1px; }
+      .footer { margin-top: auto; font-size: 12px; color: var(--muted); }
+      @media print {
+        body { background: white; }
+        .wrap, .panel { padding: 0; margin: 0; border: 0; }
+        .controls, .header { display: none !important; }
+        .preview { border: 0; }
+        .card { border-color: #000; }
+      }
+    </style>
+    <script src="qrcode.min.js"></script>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="header">
+        <div class="title">停车联系二维码</div>
+        <div class="btns">
+          <button id="printBtn">打印</button>
+          <button class="secondary" id="downloadBtn">下载图片</button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="controls">
+          <div>
+            <label>手机号</label>
+            <input id="phoneInput" type="text" placeholder="请输入手机号" inputmode="numeric" autocomplete="tel">
+          </div>
+          <div>
+            <label>提示文案</label>
+            <input id="hintInput" type="text" placeholder="扫码一键拨打，与车主联系">
+          </div>
+          <div class="btns">
+            <button id="genBtn">生成二维码</button>
+          </div>
+          <div style="font-size:12px;color:#6b7280;">生成的是拨号二维码，扫码即可一键拨打。</div>
+        </div>
+        <div class="preview">
+          <div class="card" id="card">
+            <div class="badge">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2 4.5C2 3.67157 2.67157 3 3.5 3H7.38205C8.08625 3 8.68386 3.49334 8.8016 4.18766L9.52983 8.47901C9.61872 9.00672 9.38952 9.54174 8.93914 9.82821L6.96709 11.0836C8.52517 13.8676 11.1324 16.4748 13.9164 18.0329L15.1718 16.0609C15.4583 15.6105 15.9933 15.3813 16.521 15.4702L20.8123 16.1984C21.5067 16.3161 22 16.9138 22 17.618V21.5C22 22.3284 21.3284 23 20.5 23H19C10.1634 23 3 15.8366 3 7V5.5C3 4.67157 3.67157 4 4.5 4H3.5C2.67157 4 2 4.67157 2 5.5V4.5Z" fill="#14532d"/>
+              </svg>
+              联系车主
+            </div>
+            <div class="qrbox" id="qrBox">
+              <canvas id="qrCanvas" width="280" height="280"></canvas>
+            </div>
+            <div class="hint" id="hintText">扫码一键拨打，与车主联系</div>
+            <div class="number" id="numberText"></div>
+            <div class="footer">建议打印后覆膜，放置于车内显眼位置</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      const phoneInput = document.getElementById('phoneInput');
+      const hintInput = document.getElementById('hintInput');
+      const genBtn = document.getElementById('genBtn');
+      const printBtn = document.getElementById('printBtn');
+      const downloadBtn = document.getElementById('downloadBtn');
+      const canvas = document.getElementById('qrCanvas');
+      const qrBox = document.getElementById('qrBox');
+      const hintText = document.getElementById('hintText');
+      const numberText = document.getElementById('numberText');
+      const card = document.getElementById('card');
+
+      function normalizePhone(raw) {
+        return String(raw || '').replace(/\s+/g, '').replace(/[^\d+]/g, '');
+      }
+
+      function buildDialURL(num, msg) {
+        if (!num) return '';
+        const origin = window.location.origin;
+        const url = origin + '/dial.html?p=' + encodeURIComponent(num) + '&m=' + encodeURIComponent(msg || '');
+        return url;
+      }
+
+      function maskPhoneDisplay(num) {
+        const cleaned = String(num || '').replace(/\s+/g, '');
+        let prefix = '';
+        let digits = cleaned;
+        const m = cleaned.match(/^(\+\d{1,3})(\d+)$/);
+        if (m) { prefix = m[1]; digits = m[2]; }
+        if (digits.length >= 7) {
+          const masked = digits.slice(0, 3) + '****' + digits.slice(-4);
+          return prefix + masked;
+        }
+        return cleaned;
+      }
+
+      async function renderQR(data) {
+        if (window.QRCode && typeof window.QRCode.toCanvas === 'function') {
+          await window.QRCode.toCanvas(canvas, data, { width: 280, margin: 2 });
+          if (!canvas.parentElement || canvas.parentElement.id !== 'qrBox') qrBox.appendChild(canvas);
+          return;
+        }
+        if (typeof window.QRCode === 'function') {
+          qrBox.innerHTML = '';
+          const container = document.createElement('div');
+          qrBox.appendChild(container);
+          new window.QRCode(container, { text: data, width: 280, height: 280 });
+          return;
+        }
+      }
+
+      async function generate() {
+        const phone = normalizePhone(phoneInput.value);
+        const msg = hintInput.value.trim() || '扫码一键拨打，与车主联系';
+        hintText.textContent = msg;
+        numberText.textContent = phone ? maskPhoneDisplay(phone) : '';
+        const data = buildDialURL(phone, msg);
+        if (!data) return;
+        await renderQR(data);
+      }
+
+      genBtn.addEventListener('click', generate);
+      phoneInput.addEventListener('input', () => { /* no-op */ });
+      hintInput.addEventListener('input', () => { /* no-op */ });
+      printBtn.addEventListener('click', () => window.print());
+      downloadBtn.addEventListener('click', () => {
+        const exportCanvas = document.createElement('canvas');
+        exportCanvas.width = 900;
+        exportCanvas.height = 1300;
+        const ctx = exportCanvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0,0,exportCanvas.width,exportCanvas.height);
+        const scale = 2.5;
+        ctx.scale(scale, scale);
+        const imgData = new Image();
+        imgData.onload = () => {
+          ctx.drawImage(imgData, 0, 0);
+          const link = document.createElement('a');
+          link.download = '停车联系二维码.png';
+          link.href = exportCanvas.toDataURL('image/png');
+          link.click();
+        };
+        const svg = new XMLSerializer().serializeToString(card.cloneNode(true));
+        const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+        imgData.src = URL.createObjectURL(blob);
+      });
+    </script>
+  </body>
+</html>
