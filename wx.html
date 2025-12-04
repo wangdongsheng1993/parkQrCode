@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta charset="utf-8">
+    <title>微信跳转</title>
+  </head>
+  <body>
+    <script>
+      location.href = 'weixin://biz/wxkefu/https://work.weixin.qq.com/kfid/kfc066a7dc34c2fe001?enc_scene=ENC5CRD1e2fCnJGjfa8uYiBYWU3Djy7L1SGH5P8dBnQW9Bf';
+
+      function closeByJSBridge() {
+        WeixinJSBridge.invoke('closeWindow', {}, function () {});
+      }
+
+      if (window.WeixinJSBridge) closeByJSBridge();
+      else document.addEventListener('WeixinJSBridgeReady', closeByJSBridge, false);
+
+      var useClose = 0;
+      if (useClose) {
+        window.close();
+      }
+
+      window.onfocus = function () {
+        setTimeout(function () {
+          history.back();
+        }, 200);
+      };
+    </script>
+  </body>
+</html>
